@@ -67,21 +67,59 @@ test('full callback syntax', function() {
     });
 }) 
 
-test('adding, nuking and size tests', function() {
-    QUnit.stop();
-    QUnit.expect(2);
+test('index and store are in sync when adding', function() {
+  QUnit.stop();
+  QUnit.expect(2);
 
-    store.save(me, function() {
-        store.all(function(r) {
-            equals(r.length, 1, 'parameter should have length 1 after saving a single record');
-            store.nuke(function() {
-                store.all(function(r) {
-                    equals(r.length, 0, 'parameter should have length 0 after nuking');
-                    QUnit.start();                    
-                });
-            });
-        });
-    });
+  store.save(me, function() {
+      store.all(function(r) {
+					equals(r.length, 1, 'parameter should have length 1 after saving a single record');
+	
+			});
+
+			store.keys(function(keys){
+					equals(keys.length, 1, 'parameter should have length of 1 after saving a single record');
+			});			
+			QUnit.start();
+  });
+})
+
+test('index and store are in sync when nuking', function() {
+  QUnit.stop();
+  QUnit.expect(2);
+
+  store.save(me, function() {
+			store.nuke(function(){
+					store.all(function(r) {
+							equals(r.length, 0, 'store should have length 0 after nuking');
+
+					});
+
+					store.keys(function(keys){
+							equals(keys.length, 0, 'index should have length of 0 after nuking');
+					});	      
+			})
+			QUnit.start();
+  });
+})
+
+test('index and store are in sync when removing', function() {
+  QUnit.stop();
+  QUnit.expect(2);
+
+  store.save({key: 'somekey', value:'somevalue'}, function() {
+			store.remove('somekey', function(){
+					store.all(function(r) {
+							equals(r.length, 0, 'store should have length 0 after removing');
+
+					});
+
+					store.keys(function(keys){
+							equals(keys.length, 0, 'index should have length of 0 after removing');
+					});	      
+			})
+			QUnit.start();
+  });
 })
 
 test( 'shorthand callback syntax', function() {
@@ -321,7 +359,7 @@ test( 'full callback syntax', function() {
 
     store.get('somekey', function(r){
         ok(true, 'callback got called');
-        same(this, store, '"this" should be teh Lawnchair instance');
+        same(this, store, '"this" should be the Lawnchair instance');
         QUnit.start();
     });
 });
@@ -346,7 +384,6 @@ module('remove()', {
     }
 });
 
-
 test( 'chainable', function() {
     QUnit.expect(1);
     QUnit.stop();
@@ -366,7 +403,7 @@ test( 'full callback syntax', function() {
     store.save({key:'somekey', name:'something'}, function() {
         store.remove('somekey', function(r){
             ok(true, 'callback got called');
-            same(this, store, '"this" should be teh Lawnchair instance');
+            same(this, store, '"this" should be the Lawnchair instance');
             QUnit.start();
         });
     });
@@ -381,26 +418,54 @@ test('short callback syntax', function() {
     });
 });
 
-// FIXME need to add tests for batch deletion 
-test( 'remove functionality', function() {
+test('remove functionality', function() {
     QUnit.stop();
-    QUnit.expect(2);
+    QUnit.expect(1);
 
-    store.save({name:'joni'}, function(r) {
-        //store.find("r.name == 'joni'", function(r){
-            store.remove(r, function(r) {
-                store.all(function(all) {
-                    equals(all.length, 0, "should have length 0 after saving, finding, and removing a record using entire object");
-                    store.save({key:'die', name:'dudeman'}, function(r) {
-                        store.remove('die', function(r){
-                            store.all(function(rec) {
-                                equals(rec.length, 0, "should have length 0 after saving and removing by string key");
-                                QUnit.start();
-                            });
-                        });
-                    });
-                });
-            });
-        //});
-    });
+    store.save({key:'somekey', name:'something'}, function(r) {
+		    store.remove('somekey', function(){
+		        store.all(function(rec) {
+		            equals(rec.length, 0, "should have length 0 after saving and removing by string key");
+		            QUnit.start();
+		        });
+		    });
+		});
+});
+
+test('remove batch functionality', function() {
+		QUnit.stop();
+    QUnit.expect(3);
+
+    var t = [{key:'test-get'},{key:'test-get-1'}];
+    store.batch(t, function() {
+        this.remove(['test-get','test-get-1'], function() {
+          ok(true, 'callback got called');
+          same(this, store, '"this" should be the Lawnchair instance');
+					store.all(function(rec) {
+              equals(rec.length, 0, "should have length 0 after saving and removing by batch");
+          });
+					QUnit.start()
+        })
+    }) 
 }); 
+
+
+module('exists()', {
+    setup:function() {
+        QUnit.stop();
+        store.nuke(function() { QUnit.start(); });
+    }
+});
+
+test('exists functionality', function() {
+	QUnit.stop();
+  QUnit.expect(1);
+	
+	store.save({key:'somekey', name:'something'}, function() {
+			store.all(function(rec) {
+          equals(rec.length, 1, "should have length 1 after saving");
+      });
+			QUnit.start();
+  });
+  
+});
